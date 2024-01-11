@@ -1,57 +1,145 @@
 _schema-version: "3.1"
 ID: sandbox_cap_app
+description: A simple CAP project.
 version: 1.0.0
-description: "A simple CAP project."
+modules:
+- name: sandbox_cap_app-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: sandbox_cap_app-auth
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+  build-parameters:
+    builder: npm
+- name: sandbox_cap_app
+  type: approuter.nodejs
+  path: app/sandbox_app
+  requires:
+  - name: srv-api
+    group: destinations
+    properties:
+      forwardAuthToken: true
+      name: srv-api
+      url: ~{srv-url}
+  - name: sandbox_cap_app-auth
+  - name: sandbox_cap_app-destination
+    group: destinations
+    properties:
+      forwardAuthToken: false
+      name: ui5
+      url: https://ui5.sap.com
+  parameters:
+    disk-quota: 1024M
+    keep-existing-routes: true
+    memory: 1024M
+- name: sandbox_cap_app-destinations
+  type: com.sap.application.content
+  requires:
+  - name: sandbox_cap_app-auth
+    parameters:
+      service-key:
+        name: sandbox_cap_app-auth-key
+  - name: sandbox_cap_app-html5-repo-host
+    parameters:
+      service-key:
+        name: sandbox_cap_app-html5-repo-host-key
+  - name: srv-api
+  - name: sandbox_cap_app-destination
+    parameters:
+      content-target: true
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Authentication: OAuth2UserTokenExchange
+          Name: sandbox_cap_app-app-srv
+          TokenServiceInstanceName: sandbox_cap_app-auth
+          TokenServiceKeyName: sandbox_cap_app-auth-key
+          URL: ~{srv-api/srv-url}
+          sap.cloud.service: sandbox_cap_app.service
+        - Name: sandbox_cap_app-html5-repo-host
+          ServiceInstanceName: sandbox_cap_app-html5-repo-host
+          ServiceKeyName: sandbox_cap_app-html5-repo-host-key
+          sap.cloud.service: sandbox_cap_app.service
+        - Authentication: OAuth2UserTokenExchange
+          Name: sandbox_cap_app-auth
+          ServiceInstanceName: sandbox_cap_app-auth
+          ServiceKeyName: sandbox_cap_app-auth-key
+          sap.cloud.service: sandbox_cap_app.service
+        existing_destinations_policy: update
+  build-parameters:
+    no-source: true
+- name: sandbox_cap_app-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: sandbox_cap_app-html5-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - sandboxapp.zip
+      name: sandboxapp
+      target-path: resources/
+- name: sandboxapp
+  type: html5
+  path: app/sandbox_app
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: sandbox_cap_app-html5-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-host
+- name: sandbox_cap_app-destination
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+    service: destination
+    service-plan: lite
+- name: sandbox_cap_app-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      role-collections:
+      - description: Dummy role collection for sandbox CAP and App
+        name: SandboxCapApprouterManaged-${space}
+        role-template-references:
+        - $XSAPPNAME.SandboxMember
+        - $XSAPPNAME.SandboxAdmin
+      tenant-mode: dedicated
+      xsappname: sandbox_cap_app-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
 parameters:
+  deploy_mode: html5-repo
   enable-parallel-deployments: true
 build-parameters:
   before-all:
-    - builder: custom
-      commands:
-        - npx cds build --production
-modules:
-  - name: sandbox_cap_app-srv
-    type: nodejs
-    path: gen/srv
-    parameters:
-      buildpack: nodejs_buildpack
-    build-parameters:
-      builder: npm
-    provides:
-      - name: srv-api # required by consumers of CAP services (e.g. approuter)
-        properties:
-          srv-url: ${default-url}
-    requires:
-      - name: sandbox_cap_app-auth
-  - name: sandbox_cap_app
-    type: approuter.nodejs
-    path: app/
-    parameters:
-      keep-existing-routes: true
-      disk-quota: 256M
-      memory: 256M
-    requires:
-      - name: srv-api
-        group: destinations
-        properties:
-          name: srv-api # must be used in xs-app.json as well
-          url: ~{srv-url}
-          forwardAuthToken: true
-      - name: sandbox_cap_app-auth
-
-resources:
-  - name: sandbox_cap_app-auth
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: xsuaa
-      service-plan: application
-      path: ./xs-security.json
-      config:
-        xsappname: sandbox_cap_app-${space}
-        tenant-mode: dedicated
-        role-collections:
-          - name: "SandboxCapApprouterManaged-${space}"
-            description: Dummy role collection for sandbox CAP and App
-            role-template-references:
-              - $XSAPPNAME.SandboxMember
-              - $XSAPPNAME.SandboxAdmin
+  - builder: custom
+    commands:
+    - npx cds build --production
