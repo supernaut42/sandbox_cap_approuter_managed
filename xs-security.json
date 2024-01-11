@@ -1,6 +1,43 @@
 {
-  "scopes": [],
+  "xsappname": "sandbox_cap_approuter_managed",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.SandboxMember",
+      "description": "SandboxMember"
+    },
+    {
+      "name": "$XSAPPNAME.SandboxAdmin",
+      "description": "SandboxAdmin"
+    }
+  ],
   "attributes": [],
-  "role-templates": [],
-  "authorities-inheritance": false
+  "role-templates": [
+    {
+      "name": "SandboxMember",
+      "description": "generated",
+      "scope-references": [
+        "$XSAPPNAME.SandboxMember"
+      ],
+      "attribute-references": []
+    },
+    {
+      "name": "SandboxAdmin",
+      "description": "generated",
+      "scope-references": [
+        "$XSAPPNAME.SandboxAdmin"
+      ],
+      "attribute-references": []
+    }
+  ],
+  "oauth2-configuration": {
+    "credential-types": [
+      "binding-secret",
+      "x509"
+    ],
+    "redirect-uris": [
+      "https://*.applicationstudio.cloud.sap/**",
+      "https://*.cfapps.eu10-004.hana.ondemand.com/**"
+    ]
+  }
 }
