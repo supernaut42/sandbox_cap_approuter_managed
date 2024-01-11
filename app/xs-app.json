@@ -1,5 +1,5 @@
 {
-  "welcomeFile": "app/index.html",
+  "welcomeFile": "/app/sandbox_app/index.html",
   "authenticationMethod": "route",
   "logout": {
     "logoutEndpoint": "/app-logout",

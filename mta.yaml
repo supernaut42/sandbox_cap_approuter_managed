@@ -1,4 +1,4 @@
-_schema-version: '3.1'
+_schema-version: "3.1"
 ID: sandbox_cap_app
 version: 1.0.0
 description: "A simple CAP project."
@@ -23,7 +23,6 @@ modules:
           srv-url: ${default-url}
     requires:
       - name: sandbox_cap_app-auth
-
   - name: sandbox_cap_app
     type: approuter.nodejs
     path: app/
@@ -48,5 +47,11 @@ resources:
       service-plan: application
       path: ./xs-security.json
       config:
-        xsappname: sandbox_cap_app-${org}-${space}
+        xsappname: sandbox_cap_app-${space}
         tenant-mode: dedicated
+        role-collections:
+          - name: "SandboxCapApprouterManaged-${space}"
+            description: Dummy role collection for sandbox CAP and App
+            role-template-references:
+              - $XSAPPNAME.SandboxMember
+              - $XSAPPNAME.SandboxAdmin
